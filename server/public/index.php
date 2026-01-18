@@ -1,11 +1,11 @@
 <?php
 
 /**
- * Collaborative Task Management System - API Entry Point
+ * Collaborative Task Management System - Backend Entry Point
  *
  * This file serves as the main entry point for the PHP backend API.
  * It handles request routing, initializes the database connection,
- * and dispatches requests to the appropriate controllers.
+ * sets up CORS, and dispatches requests to the appropriate controllers.
  *
  * Tech Stack: PHP, Composer, Dotenv, PDO
  *
@@ -15,229 +15,178 @@
  */
 
 // -----------------------------------------------------------------------------
-// 1. Autoloading and Environment Setup
+// 1. Autoload Composer Dependencies
 // -----------------------------------------------------------------------------
-
-// Require Composer's autoloader for automatic class loading.
-// This ensures that classes from `vendor/` and `src/` are available.
+// This line includes Composer's autoloader, which automatically loads
+// all necessary classes from the 'vendor' directory and our 'src' directory
+// based on the PSR-4 configuration in composer.json.
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Load environment variables from the .env file.
-// This is crucial for sensitive information like database credentials.
-try {
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
-    $dotenv->load();
-} catch (Dotenv\Exception\InvalidPathException $e) {
-    // Log or handle the error if .env file is not found, but don't stop execution in dev.
-    // In production, this should be handled more robustly (e.g., fail fast).
-    error_log("Warning: .env file not found or invalid path. Ensure it's in the project root. Error: " . $e->getMessage());
-}
-
+// -----------------------------------------------------------------------------
+// 2. Load Environment Variables
+// -----------------------------------------------------------------------------
+// We use 'vlucas/phpdotenv' to load environment variables from the .env file.
+// This keeps sensitive configuration (like database credentials) out of
+// version control and makes it easy to manage different environments.
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
 
 // -----------------------------------------------------------------------------
-// 2. CORS (Cross-Origin Resource Sharing) Configuration
+// 3. Error Reporting (Development vs. Production)
 // -----------------------------------------------------------------------------
-
-// Allow requests from specific origins (e.g., your React frontend).
-// In a production environment, replace '*' with your actual frontend URL(s).
-// Example: 'http://localhost:3000', 'https://your-frontend.com'
-$allowedOrigins = [
-    $_ENV['CLIENT_ORIGIN'] ?? 'http://localhost:3000', // Default for local development
-    // Add other origins for interconnected services if needed
-    // $_ENV['WHITEBOARD_SERVICE_ORIGIN'] ?? 'http://localhost:3001',
-    // $_ENV['SOCIAL_MEDIA_SERVICE_ORIGIN'] ?? 'http://localhost:3002',
-];
-
-// Check if the request origin is allowed
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowedOrigins) || (isset($_ENV['APP_ENV']) && $_ENV['APP_ENV'] === 'development')) {
-    header("Access-Control-Allow-Origin: " . $origin);
+// In a production environment, error display should be turned off for security.
+// For development, it's useful to see errors directly.
+if (($_ENV['APP_ENV'] ?? 'development') === 'development') {
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
 } else {
-    // If origin is not allowed, you might want to return an error or default to a safe origin
-    // For now, we'll allow it if not explicitly in the list but in dev mode, otherwise restrict.
-    if (!isset($_ENV['APP_ENV']) || $_ENV['APP_ENV'] !== 'development') {
-        // For production, uncomment the following line to strictly enforce allowed origins
-        // header("HTTP/1.1 403 Forbidden");
-        // exit("Forbidden: Origin not allowed.");
-    }
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+    error_reporting(0);
+    // Log errors to a file in production
+    ini_set('log_errors', 1);
+    ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
 }
 
-
-// Allow specific HTTP methods.
+// -----------------------------------------------------------------------------
+// 4. CORS (Cross-Origin Resource Sharing) Configuration
+// -----------------------------------------------------------------------------
+// These headers are crucial for allowing the React frontend (running on a
+// different port or domain) to make requests to this PHP backend.
+// The 'CLIENT_URL' environment variable should specify the frontend's origin.
+$allowedOrigin = $_ENV['CLIENT_URL'] ?? '*'; // Fallback to '*' for development if not set
+header("Access-Control-Allow-Origin: " . $allowedOrigin);
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-// Allow specific headers to be sent by the client.
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-// Allow credentials (e.g., cookies, HTTP authentication) to be sent.
-header("Access-Control-Allow-Credentials: true");
-// Set the maximum age (in seconds) for which the preflight request can be cached.
-header("Access-Control-Max-Age: 86400");
-
-// Handle preflight OPTIONS requests.
-// Browsers send an OPTIONS request before the actual request to check CORS policies.
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204); // No Content
-    exit();
-}
-
-// Set default content type for all responses to JSON.
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
 
-
-// -----------------------------------------------------------------------------
-// 3. Database Connection
-// -----------------------------------------------------------------------------
-
-// Include the database configuration file.
-require_once __DIR__ . '/../config/database.php';
-
-try {
-    // Establish a PDO database connection.
-    $pdo = connectDB();
-} catch (PDOException $e) {
-    // If database connection fails, return a 500 Internal Server Error.
-    http_response_code(500);
-    echo json_encode(['message' => 'Database connection failed: ' . $e->getMessage()]);
+// Handle preflight OPTIONS requests (sent by browsers before actual requests)
+// If it's an OPTIONS request, we just send the CORS headers and exit.
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
     exit();
 }
 
+// -----------------------------------------------------------------------------
+// 5. Initialize Database Connection
+// -----------------------------------------------------------------------------
+// We use the Database class to establish a PDO connection.
+// This connection will be passed to controllers and models.
+require_once __DIR__ . '/../config/database.php';
+use App\Config\Database;
+use PDO;
+use PDOException;
+
+$pdo = null;
+try {
+    $db = new Database();
+    $pdo = $db->connect();
+} catch (PDOException $e) {
+    // Log the error in production, display generic message
+    error_log("Database connection failed: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['message' => 'Service Unavailable: Could not connect to the database.']);
+    exit();
+}
 
 // -----------------------------------------------------------------------------
-// 4. Routing and Request Dispatching
+// 6. Request Routing
 // -----------------------------------------------------------------------------
+// This section implements a simple routing mechanism to direct incoming
+// HTTP requests to the appropriate controller methods based on the URL path
+// and HTTP method.
+use App\Controllers\TaskController;
 
-// Get the request URI and method.
-$requestUri = $_SERVER['REQUEST_URI'];
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 
-// Remove query string from URI for routing purposes.
-$path = parse_url($requestUri, PHP_URL_PATH);
-// Remove any base path if the application is not in the root directory.
-// For example, if your app is at example.com/api, $basePath would be '/api'.
-$basePath = $_ENV['APP_BASE_PATH'] ?? ''; // e.g., '/api'
-if ($basePath && strpos($path, $basePath) === 0) {
-    $path = substr($path, strlen($basePath));
-}
-$path = trim($path, '/'); // Remove leading/trailing slashes
+// Define the base API path for the Task Management service.
+// This helps in maintaining a consistent API structure, especially in a
+// microservice environment where different services might have their own
+// versioned API prefixes (e.g., /api/v1/users, /api/v1/projects).
+$baseApiPath = '/api/v1/tasks';
 
-// Split the path into segments.
-$segments = explode('/', $path);
+// Check if the request URI starts with our base API path
+if (strpos($requestUri, $baseApiPath) === 0) {
+    // Extract the path relative to the base API path
+    $path = substr($requestUri, strlen($baseApiPath));
+    $pathSegments = array_filter(explode('/', $path)); // Remove empty segments from path
 
-// Instantiate controllers.
-// Pass the PDO connection to the controllers for database operations.
-$taskController = new \App\Controllers\TaskController($pdo);
+    // Initialize the TaskController with the database connection
+    $taskController = new TaskController($pdo);
 
-// Initialize response data and status code.
-$responseData = [];
-$statusCode = 200;
-
-try {
-    // Simple Router Logic
-    switch ($segments[0]) {
-        case 'tasks':
-            // Handle /tasks and /tasks/{id} endpoints
-            $taskId = $segments[1] ?? null;
-
-            if ($taskId) {
-                // Request for a specific task: /tasks/{id}
-                switch ($requestMethod) {
-                    case 'GET':
-                        $responseData = $taskController->show($taskId);
-                        break;
-                    case 'PUT':
-                        $input = json_decode(file_get_contents('php://input'), true);
-                        if (!$input) {
-                            throw new Exception("Invalid JSON input", 400);
-                        }
-                        $responseData = $taskController->update($taskId, $input);
-                        break;
-                    case 'DELETE':
-                        $responseData = $taskController->destroy($taskId);
-                        $statusCode = 204; // No Content for successful deletion
-                        break;
-                    default:
-                        throw new Exception("Method Not Allowed", 405);
-                }
-            } else {
-                // Request for all tasks: /tasks
-                switch ($requestMethod) {
-                    case 'GET':
-                        $responseData = $taskController->index();
-                        break;
-                    case 'POST':
-                        $input = json_decode(file_get_contents('php://input'), true);
-                        if (!$input) {
-                            throw new Exception("Invalid JSON input", 400);
-                        }
-                        $responseData = $taskController->store($input);
-                        $statusCode = 201; // Created
-                        break;
-                    default:
-                        throw new Exception("Method Not Allowed", 405);
-                }
-            }
-            break;
-
-        case 'projects':
-            // Handle /projects/{projectId}/tasks endpoint
-            $projectId = $segments[1] ?? null;
-            if ($projectId && ($segments[2] ?? null) === 'tasks') {
-                switch ($requestMethod) {
-                    case 'GET':
-                        $responseData = $taskController->getTasksByProject($projectId);
-                        break;
-                    default:
-                        throw new Exception("Method Not Allowed", 405);
-                }
-            } else {
-                // If it's just /projects or /projects/{id} without /tasks,
-                // this API doesn't handle project CRUD directly yet.
-                // This could be extended to a ProjectController.
-                throw new Exception("Not Found", 404);
-            }
-            break;
-
-        case 'health':
-            // Simple health check endpoint for monitoring or service discovery
-            // This could be used by a gateway or other microservices.
-            $responseData = ['status' => 'ok', 'service' => 'task-management-api', 'timestamp' => time()];
-            break;
-
-        case '':
-            // Root path, provide a simple API welcome message
-            $responseData = ['message' => 'Welcome to the Collaborative Task Management API!', 'version' => '1.0'];
-            break;
-
-        default:
-            // No route matched
-            throw new Exception("Not Found", 404);
+    // Route handling for /api/v1/tasks
+    if (empty($pathSegments)) {
+        switch ($requestMethod) {
+            case 'GET':
+                $taskController->index(); // Get all tasks
+                break;
+            case 'POST':
+                $taskController->store(); // Create a new task
+                break;
+            default:
+                http_response_code(405); // Method Not Allowed
+                echo json_encode(['message' => 'Method Not Allowed for /api/v1/tasks']);
+                break;
+        }
     }
-} catch (Exception $e) {
-    // Catch exceptions thrown during request processing.
-    $statusCode = $e->getCode() ?: 500; // Use custom code if set, otherwise 500.
-    if ($statusCode < 100 || $statusCode >= 600) { // Ensure valid HTTP status code range
-        $statusCode = 500;
+    // Route handling for /api/v1/tasks/{id}
+    elseif (count($pathSegments) === 1 && is_numeric($pathSegments[0])) {
+        $id = (int) $pathSegments[0]; // Extract task ID
+        switch ($requestMethod) {
+            case 'GET':
+                $taskController->show($id); // Get a single task by ID
+                break;
+            case 'PUT':
+                $taskController->update($id); // Update a task by ID
+                break;
+            case 'DELETE':
+                $taskController->destroy($id); // Delete a task by ID
+                break;
+            default:
+                http_response_code(405); // Method Not Allowed
+                echo json_encode(['message' => 'Method Not Allowed for /api/v1/tasks/{id}']);
+                break;
+        }
     }
-    $responseData = ['message' => $e->getMessage()];
-
-    // In development, include more details. In production, log and provide generic message.
-    if (isset($_ENV['APP_ENV']) && $_ENV['APP_ENV'] === 'development') {
-        $responseData['trace'] = $e->getTraceAsString();
-        $responseData['file'] = $e->getFile();
-        $responseData['line'] = $e->getLine();
+    // If the path segments don't match expected patterns
+    else {
+        http_response_code(404); // Not Found
+        echo json_encode(['message' => 'Resource Not Found']);
     }
-    error_log("API Error: " . $e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
+} else {
+    // If the request URI does not match any defined API path
+    http_response_code(404); // Not Found
+    echo json_encode(['message' => 'API Endpoint Not Found']);
 }
 
 // -----------------------------------------------------------------------------
-// 5. Send Response
+// Cross-Project Context & Future Considerations
 // -----------------------------------------------------------------------------
-
-// Set the HTTP status code.
-http_response_code($statusCode);
-
-// Encode the response data to JSON and output it.
-echo json_encode($responseData);
-
-// Close the database connection (optional, PHP usually closes it automatically at script end).
-$pdo = null;
-?>
+// This Task Management service is part of a larger interconnected system.
+// In a full microservices architecture, this service would typically:
+//
+// - Be registered with an API Gateway (e.g., Nginx, Kong, AWS API Gateway)
+//   which would handle routing, authentication, and rate limiting across
+//   all services (Task Management, Whiteboard, Social Media, E-commerce).
+//   The `baseApiPath` `/api/v1/tasks` is designed to fit this pattern.
+//
+// - Rely on a dedicated User Authentication/Authorization service.
+//   User sessions and permissions would be managed externally, and this
+//   service would validate tokens (e.g., JWTs) passed in the 'Authorization' header.
+//
+// - Integrate with other services:
+//   - Real-time Collaborative Whiteboard: A task might have a linked whiteboard session.
+//     This could involve storing a `whiteboard_session_id` in the task model
+//     and making API calls to the Whiteboard service.
+//   - Micro Social Media Dashboard: Task updates could be posted as activity
+//     feed items on the social media dashboard.
+//   - Multi-vendor E-commerce Marketplace: While less direct, a task could
+//     be related to managing vendor orders or product listings in the marketplace.
+//
+// - Utilize a central Logging and Monitoring system.
+//
+// - Implement a robust Caching layer (e.g., Redis) for frequently accessed data.
+//
+// This `index.php
