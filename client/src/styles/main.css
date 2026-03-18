@@ -1,0 +1,455 @@
+/*
+ * main.css
+ *
+ * Global styles for the Collaborative Task Management System client application.
+ * Defines base typography, layout, color palette, and common component styles.
+ *
+ * This stylesheet aims for a clean, modern, and responsive design.
+ */
+
+/* --- CSS Variables for Theming --- */
+:root {
+    --primary-color: #4A90E2; /* Blue for primary actions/branding */
+    --secondary-color: #50E3C2; /* Teal for accents/success */
+    --accent-color: #F5A623; /* Orange for warnings/highlights */
+    --danger-color: #E02020; /* Red for errors/destructive actions */
+
+    --text-color-dark: #333333;
+    --text-color-light: #ffffff;
+    --text-color-secondary: #666666;
+
+    --bg-color-light: #f4f7f6; /* Light background for general content */
+    --bg-color-dark: #2c3e50; /* Dark background for headers/footers */
+    --bg-color-card: #ffffff; /* White background for cards */
+    --bg-color-hover: #e0e0e0; /* Light grey for hover states */
+
+    --border-color: #e0e0e0;
+    --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.15);
+
+    --font-family-sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-size-base: 16px;
+    --line-height-base: 1.6;
+
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+}
+
+/* --- Base Styles & Resets --- */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: var(--font-size-base);
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-family-sans);
+    line-height: var(--line-height-base);
+    color: var(--text-color-dark);
+    background-color: var(--bg-color-light);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#root {
+    flex: 1; /* Allows the root element to grow and fill available space */
+    display: flex;
+    flex-direction: column;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-color-dark);
+    line-height: 1.2;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
+
+p {
+    margin-bottom: var(--spacing-md);
+}
+
+ul, ol {
+    margin-left: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+li {
+    margin-bottom: var(--spacing-sm);
+}
+
+/* --- Layout & Containers --- */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1; /* Allows main content to take up remaining space */
+    padding: var(--spacing-lg);
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-md);
+}
+
+/* --- Header & Navigation --- */
+.app-header {
+    background-color: var(--bg-color-dark);
+    color: var(--text-color-light);
+    padding: var(--spacing-md) var(--spacing-lg);
+    box-shadow: var(--shadow-medium);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.app-header .logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--text-color-light);
+    text-decoration: none;
+}
+
+.app-header .nav-links {
+    display: flex;
+    gap: var(--spacing-lg);
+}
+
+.app-header .nav-links a {
+    color: var(--text-color-light);
+    font-weight: 500;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: 4px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.app-header .nav-links a:hover,
+.app-header .nav-links a.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+}
+
+/* --- Buttons --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+    text-decoration: none; /* Ensure buttons as links look consistent */
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+
+.btn-primary:hover {
+    background-color: darken(var(--primary-color), 10%); /* Placeholder for actual darken function */
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: var(--text-color-dark);
+}
+
+.btn-secondary:hover {
+    background-color: darken(var(--secondary-color), 10%);
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: var(--text-color-light);
+}
+
+.btn-danger:hover {
+    background-color: darken(var(--danger-color), 10%);
+    transform: translateY(-1px);
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-outline:hover {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+    transform: translateY(-1px);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* --- Forms & Inputs --- */
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-weight: 500;
+    color: var(--text-color-secondary);
+}
+
+.form-control {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    color: var(--text-color-dark);
+    background-color: var(--bg-color-card);
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* --- TaskCard Component Styles --- */
+.task-card {
+    background-color: var(--bg-color-card);
+    border-radius: 8px;
+    box-shadow: var(--shadow-light);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.task-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-medium);
+}
+
+.task-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.task-card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-color-dark);
+    margin: 0;
+}
+
+.task-card-description {
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
+    margin-bottom: var(--spacing-sm);
+    flex-grow: 1; /* Allows description to take available space */
+}
+
+.task-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+    margin-top: var(--spacing-sm);
+}
+
+.task-card-meta span {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.task-card-meta span svg {
+    font-size: 1rem;
+    color: var(--primary-color); /* Icon color */
+}
+
+.task-card-status {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* Status specific colors */
+.status-pending {
+    background-color: #FFF3E0; /* Light orange */
+    color: #F57C00; /* Darker orange */
+}
+
+.status-in-progress {
+    background-color: #E3F2FD; /* Light blue */
+    color: #1976D2; /* Darker blue */
+}
+
+.status-completed {
+    background-color: #E8F5E9; /* Light green */
+    color: #388E3C; /* Darker green */
+}
+
+.status-blocked {
+    background-color: #FFEBEE; /* Light red */
+    color: #D32F2F; /* Darker red */
+}
+
+.task-card-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    justify-content: flex-end;
+}
+
+/* --- Utility Classes --- */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+
+.mb-xs { margin-bottom: var(--spacing-xs); }
+.mb-sm { margin-bottom: var(--spacing-sm); }
+.mb-md { margin-bottom: var(--spacing-md); }
+.mb-lg { margin-bottom: var(--spacing-lg); }
+.mb-xl { margin-bottom: var(--spacing-xl); }
+
+.mt-xs { margin-top: var(--spacing-xs); }
+.mt-sm { margin-top: var(--spacing-sm); }
+.mt-md { margin-top: var(--spacing-md); }
+.mt-lg { margin-top: var(--spacing-lg); }
+.mt-xl { margin-top: var(--spacing-xl); }
+
+.flex-row { display: flex; flex-direction: row; }
+.flex-col { display: flex; flex-direction: column; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+.justify-center { justify-content: center; }
+.align-center { align-items: center; }
+.gap-sm { gap: var(--spacing-sm); }
+.gap-md { gap: var(--spacing-md); }
+.gap-lg { gap: var(--spacing-lg); }
+
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+    .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .app-header .nav-links {
+        flex-direction: column;
+        width: 100%;
+        gap: var(--spacing-xs);
+    }
+
+    .app-header .nav-links a {
+        width: 100%;
+        text-align: center;
+        padding: var(--spacing-sm);
+    }
+
+    .main-content {
+        padding: var(--spacing-md);
+    }
+
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.75rem; }
+    h3 { font-size: 1.5rem; }
+
+    .task-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .task-card-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 0.9rem;
+    }
+
+    .main-content {
+        padding: var(--spacing-sm);
+    }
+
+    .app-header {
+        padding: var(--spacing-sm);
+    }
+
+    .task-card {
+        padding: var(--spacing-sm);
+    }
+
+    .task-card-meta {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+}
+
+/* Helper for darkening colors (requires a preprocessor or JS for dynamic values
