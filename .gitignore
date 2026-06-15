@@ -1,0 +1,108 @@
+# Git Ignore for Collaborative Task Management System
+
+# Node.js / React Client-side
+# ===========================
+# node_modules
+# Dependency directories
+node_modules/
+
+# build output
+build/
+dist/
+.parcel-cache/
+
+# local environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# PHP / Composer Server-side
+# ==========================
+# Composer dependencies
+vendor/
+
+# local environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+storage/*.log
+storage/logs/*.log
+
+# Cache and temporary files
+storage/cache/*
+storage/sessions/*
+storage/views/*
+storage/app/public/* # If user-uploaded files are stored here, they should not be versioned
+
+# PHPUnit
+.phpunit.result.cache
+
+# IDE specific files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# General
+# =======
+# Backup files
+*.bak
+*.swp
+*.swo
+*~
+.#*
+
+# OS generated files
+.DS_Store
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# CI/CD specific files (if any local ones are generated)
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+.github/workflows/*.yml # Usually committed, but if local temporary files are generated, ignore them.
+                        # In this project, .github/workflows/ci.yml is committed, so don't ignore it.
+
+# Other potential temporary files
+*.tmp
+tmp/
+temp/
