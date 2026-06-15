@@ -3,27 +3,34 @@
 namespace App\Controllers;
 
 use App\Models\Task;
+use Exception;
 
 /**
- * Class TaskController
+ * TaskController
  *
- * Handles API requests related to tasks within the Collaborative Task Management System.
- * Provides CRUD (Create, Read, Update, Delete) operations for tasks.
- * This controller interacts with the Task model to perform database operations
- * and returns JSON responses.
+ * Handles API requests related to tasks. This includes CRUD operations
+ * (Create, Read, Update, Delete) for tasks within the Collaborative Task Management System.
+ *
+ * Assumes a basic routing mechanism in `server/public/index.php` that maps
+ * incoming HTTP requests to the appropriate methods in this controller.
+ *
+ * For a production system, consider adding:
+ * - Robust input validation (e.g., using a dedicated validation library).
+ * - Authentication and Authorization middleware to protect endpoints.
+ * - Dependency Injection for the Task model.
+ * - Centralized error logging.
  */
 class TaskController
 {
     /**
-     * @var Task The Task model instance used for database interactions.
+     * @var Task The Task model instance.
      */
-    private Task $taskModel;
+    private $taskModel;
 
     /**
-     * TaskController constructor.
-     *
-     * Initializes the Task model. In a more complex framework, this would typically
-     * be handled by a Dependency Injection Container.
+     * Constructor
+     * Initializes the Task model. In a more advanced framework, this would typically
+     * be injected via a Dependency Injection container.
      */
     public function __construct()
     {
@@ -32,22 +39,79 @@ class TaskController
 
     /**
      * Retrieves a list of tasks.
+     * Supports filtering by project_id, assigned_to_user_id, or created_by_user_id via query parameters.
      *
-     * Supports optional filtering by `project_id` and `user_id` via query parameters.
+     * HTTP Method: GET
+     * Endpoint: /api/tasks
+     * Query Params:
+     *   - project_id (optional): Filter tasks by project.
+     *   - assigned_to_user_id (optional): Filter tasks assigned to a specific user.
+     *   - created_by_user_id (optional): Filter tasks created by a specific user.
      *
-     * @return void JSON response containing an array of tasks or an error message.
+     * @return void JSON response containing tasks or an error message.
      */
     public function index(): void
     {
-        // In a real application, query parameters would be parsed from a Request object.
-        // For simplicity, we're directly accessing $_GET.
-        $projectId = $_GET['project_id'] ?? null;
-        $userId = $_GET['user_id'] ?? null; // Represents the assigned user or current authenticated user
+        header('Content-Type: application/json');
 
         try {
-            $tasks = $this->taskModel->getAll($projectId, $userId);
+            $filters = [];
+            if (isset($_GET['project_id']) && is_numeric($_GET['project_id'])) {
+                $filters['project_id'] = (int)$_GET['project_id'];
+            }
+            if (isset($_GET['assigned_to_user_id']) && is_numeric($_GET['assigned_to_user_id'])) {
+                $filters['assigned_to_user_id'] = (int)$_GET['assigned_to_user_id'];
+            }
+            if (isset($_GET['created_by_user_id']) && is_numeric($_GET['created_by_user_id'])) {
+                $filters['created_by_user_id'] = (int)$_GET['created_by_user_id'];
+            }
 
-            header('Content-Type: application/json');
+            $tasks = $this->taskModel->getAll($filters);
             http_response_code(200);
             echo json_encode(['status' => 'success', 'data' => $tasks]);
-        } catch
+        } catch (Exception $e) {
+            // Log the error for debugging in a production environment
+            error_log("Error retrieving tasks: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => 'Failed to retrieve tasks.', 'details' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Retrieves a single task by its ID.
+     *
+     * HTTP Method: GET
+     * Endpoint: /api/tasks/{id}
+     *
+     * @param int $id The ID of the task to retrieve.
+     * @return void JSON response containing the task or an error message.
+     */
+    public function show(int $id): void
+    {
+        header('Content-Type: application/json');
+
+        try {
+            $task = $this->taskModel->getById($id);
+
+            if ($task) {
+                http_response_code(200);
+                echo json_encode(['status' => 'success', 'data' => $task]);
+            } else {
+                http_response_code(404);
+                echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
+            }
+        } catch (Exception $e) {
+            error_log("Error retrieving task ID {$id}: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => 'Failed to retrieve task.', 'details' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Creates a new task.
+     *
+     * HTTP Method: POST
+     * Endpoint: /api/tasks
+     * Request Body (JSON):
+     *   - title (string, required): The title of the task.
+     *   - project_id (int, required): The ID of the project the task belongs
